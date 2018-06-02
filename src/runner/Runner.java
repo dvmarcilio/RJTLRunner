@@ -42,12 +42,12 @@ public class Runner {
 			if (args.length == 0)
 				throw new IllegalArgumentException("At least one path should be given as argument");
 
-			if (!checkIfValidFiles(args))
+			if (!areAllFilesValid(args))
 				throw new IllegalArgumentException(
 						"All paths should exist, be a file (not a directory) and be readable/writable");
 		}
 
-		private static boolean checkIfValidFiles(String[] args) {
+		private static boolean areAllFilesValid(String[] args) {
 			Predicate<Path> exists = Files::exists;
 			Predicate<Path> isDirectory = Files::isDirectory;
 			Predicate<Path> isNotDirectory = isDirectory.negate();
