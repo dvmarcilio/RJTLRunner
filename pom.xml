@@ -3,13 +3,18 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>RJTLRunner</groupId>
 	<artifactId>RJTLRunner</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.2-SNAPSHOT</version>
 
 	<dependencies>
 		<dependency>
 			<groupId>org.rjtl</groupId>
 			<artifactId>rjtl</artifactId>
-			<version>0.0.1</version>
+			<version>0.0.2</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.googlejavaformat</groupId>
+			<artifactId>google-java-format</artifactId>
+			<version>1.6</version>
 		</dependency>
 	</dependencies>
 
@@ -58,10 +63,10 @@
 								<goal>install-file</goal>
 							</goals>
 							<configuration>
-								<file>${project.basedir}/jars/rascal-rjtl-0.0.1.jar</file>
+								<file>${project.basedir}/jars/rascal-rjtl-0.0.2.jar</file>
 								<groupId>org.rjtl</groupId>
 								<artifactId>rjtl</artifactId>
-								<version>0.0.1</version>
+								<version>0.0.2</version>
 								<packaging>jar</packaging>
 							</configuration>
 						</execution>
