@@ -85,13 +85,19 @@ public class Runner {
 		}
 
 		private static boolean areAllFilesValid(String[] args) {
-			Predicate<Path> exists = Files::exists;
-			Predicate<Path> isDirectory = Files::isDirectory;
-			Predicate<Path> isNotDirectory = isDirectory.negate();
-			Predicate<Path> isReadable = Files::isReadable;
-			Predicate<Path> isWritable = Files::isWritable;
-			Predicate<Path> validFile = exists.and(isNotDirectory).and(isReadable).and(isWritable);
-			return Stream.of(args).map(Paths::get).allMatch(validFile);
+			final Predicate<Path> isDirectory = Files::isDirectory;
+			final Predicate<Path> isNotDirectory = isDirectory.negate();
+			final List<Predicate<Path>> predicates = Arrays.asList(Files::exists, isNotDirectory, Files::isReadable, Files::isWritable);
+
+			return Stream.of(args).map(Paths::get).allMatch(predicateByPath(predicates));
 		}
+
+	    	private static Predicate<Path> predicateByPath(final List<Predicate<Path>> predicates) {
+			return path -> allMatch(path, predicates);
+	    	}
+
+	    	private static Boolean allMatch(final Path path, final List<Predicate<Path>> predicates) {
+			return predicates.stream().allMatch(predicate -> predicate.test(path));
+	    	}
 	}
 }
