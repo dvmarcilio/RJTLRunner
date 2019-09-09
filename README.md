@@ -1,12 +1,13 @@
 # Building and Running
 
-First we need to locally install the rascal-rjtl JAR in our local maven repository. 
+First we need to locally install the rascal-rjtl JAR in our local maven repository.
 
 ```bash
 mvn initialize
 ```
 
 After that we can build the Runner´s JAR.
+
 ```bash
 mvn clean compile assembly:single
 ```
