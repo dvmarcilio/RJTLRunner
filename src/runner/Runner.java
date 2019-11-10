@@ -64,38 +64,42 @@ public class Runner {
 	private static void fixForExcludes(ArgsValidator argsValidator) throws URISyntaxException {
 		IList excludes = listOfStringAsIList(argsValidator.rulesToExclude);
 
-		for (String dir : argsValidator.directoryArguments) {
-			ISourceLocation fileLoc = stringPathToISourceLocation(dir);
-			IBool ignoreTestFile = ValueFactory.getInstance().bool(argsValidator.ignoreTestFiles);
-			evaluator.call(FIX_OPTIONS_DIRECTORY_EXCLUDES, fileLoc, excludes, ignoreTestFile);
-		}
+		callMethodForDirectoriesWithRulesAndIgnoreTestFile(FIX_OPTIONS_DIRECTORY_EXCLUDES,
+				argsValidator, excludes);
 
-		for (String file : argsValidator.fileArguments) {
-			ISourceLocation fileLoc = stringPathToISourceLocation(file);
-			evaluator.call(FIX_OPTIONS_FILE_EXCLUDES, fileLoc, excludes);
-		}
+		callMethodForFilesWithRules(FIX_OPTIONS_FILE_EXCLUDES, argsValidator, excludes);
 	}
 
-	private static void fixForIncludes(ArgsValidator argsValidator) throws URISyntaxException {
-		IList rules = listOfStringAsIList(argsValidator.rulesToInclude);
-
+	private static void callMethodForDirectoriesWithRulesAndIgnoreTestFile(String method,
+			ArgsValidator argsValidator, IList rules) throws URISyntaxException {
 		for (String dir : argsValidator.directoryArguments) {
 			ISourceLocation fileLoc = stringPathToISourceLocation(dir);
 			IBool ignoreTestFile = ValueFactory.getInstance().bool(argsValidator.ignoreTestFiles);
-			evaluator.call(FIX_OPTIONS_DIRECTORY_INCLUDES, fileLoc, rules, ignoreTestFile);
-		}
-
-		for (String file : argsValidator.fileArguments) {
-			ISourceLocation fileLoc = stringPathToISourceLocation(file);
-			evaluator.call(FIX_OPTIONS_FILE_INCLUDES, fileLoc, rules);
+			evaluator.call(method, fileLoc, rules, ignoreTestFile);
 		}
 	}
 
 	private static ISourceLocation stringPathToISourceLocation(String dir)
 			throws URISyntaxException {
 		Path fileLocation = Paths.get(dir);
-		ISourceLocation fileLoc = URIUtil.createFileLocation(fileLocation.toString());
-		return fileLoc;
+		return URIUtil.createFileLocation(fileLocation.toString());
+	}
+
+	private static void callMethodForFilesWithRules(String method, ArgsValidator argsValidator,
+			IList excludes) throws URISyntaxException {
+		for (String file : argsValidator.fileArguments) {
+			ISourceLocation fileLoc = stringPathToISourceLocation(file);
+			evaluator.call(method, fileLoc, excludes);
+		}
+	}
+
+	private static void fixForIncludes(ArgsValidator argsValidator) throws URISyntaxException {
+		IList rules = listOfStringAsIList(argsValidator.rulesToInclude);
+
+		callMethodForDirectoriesWithRulesAndIgnoreTestFile(FIX_OPTIONS_DIRECTORY_INCLUDES,
+				argsValidator, rules);
+
+		callMethodForFilesWithRules(FIX_OPTIONS_FILE_INCLUDES, argsValidator, rules);
 	}
 
 	private static IList listOfStringAsIList(List<String> strings) {
@@ -116,7 +120,7 @@ public class Runner {
 
 		for (String file : argsValidator.fileArguments) {
 			ISourceLocation fileLoc = stringPathToISourceLocation(file);
-			evaluator.call(FIX_FILE_METHOD);
+			evaluator.call(FIX_FILE_METHOD, fileLoc);
 		}
 	}
 
@@ -155,15 +159,15 @@ public class Runner {
 		}
 
 		private List<String> getOptionsAsList(String[] args) {
-			List<String> options = new ArrayList<String>(Arrays.asList(args));
-			options.removeAll(pathArguments);
-			return options;
+			List<String> optionsList = new ArrayList<>(Arrays.asList(args));
+			optionsList.removeAll(pathArguments);
+			return optionsList;
 		}
 
 		private List<String> valuesFromListOption(String option) {
 			Optional<String> possible = possibleOption(option);
 			if (possible.isPresent()) {
-				String valuesSeparatedByComma = valuesSubStringFromOption(option, possible);
+				String valuesSeparatedByComma = valuesSubStringFromOption(option, possible.get());
 				return Stream.of(valuesSeparatedByComma.split(",")) //
 						.distinct() //
 						.collect(Collectors.toList());
@@ -177,15 +181,15 @@ public class Runner {
 					.findFirst();
 		}
 
-		private String valuesSubStringFromOption(String option, Optional<String> possible) {
+		private static String valuesSubStringFromOption(String option, String possible) {
 			String beforeValues = OPTION_PREFIX + option + "=";
-			return possible.get().substring(beforeValues.length());
+			return possible.substring(beforeValues.length());
 		}
 
 		private boolean valueFromBoolean(String option, boolean defaultValue) {
 			Optional<String> possible = possibleOption(option);
 			if (possible.isPresent()) {
-				return new Boolean(valuesSubStringFromOption(option, possible));
+				return new Boolean(valuesSubStringFromOption(option, possible.get()));
 			}
 			return defaultValue;
 		}
@@ -198,7 +202,7 @@ public class Runner {
 		}
 
 		private void validatePaths() {
-			if (pathArguments.size() == 0)
+			if (pathArguments.isEmpty())
 				throw new IllegalArgumentException("At least one path should be given as argument");
 
 			if (!areAllPathsValid())
@@ -237,7 +241,7 @@ public class Runner {
 			directoryArguments.removeAll(fileArguments);
 		}
 
-		private Predicate<Path> allFilesAreJavaAndAreReadableAndWritable() {
+		private static Predicate<Path> allFilesAreJavaAndAreReadableAndWritable() {
 			Predicate<Path> endsWithJava = p -> p.toFile().getName().endsWith(".java");
 			Predicate<Path> isReadable = Files::isReadable;
 			Predicate<Path> isWritable = Files::isWritable;
