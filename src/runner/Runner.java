@@ -1,6 +1,7 @@
 package runner;
 
 import java.io.PrintWriter;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -75,7 +76,14 @@ public class Runner {
 		for (String dir : argsValidator.directoryArguments) {
 			ISourceLocation fileLoc = stringPathToISourceLocation(dir);
 			IBool ignoreTestFile = ValueFactory.getInstance().bool(argsValidator.ignoreTestFiles);
-			evaluator.call(method, fileLoc, rules, ignoreTestFile);
+
+			if (argsValidator.logPath == null) {
+				evaluator.call(method, fileLoc, rules, ignoreTestFile);
+			} else {
+				ISourceLocation logPathLoc = stringPathToISourceLocation(
+						argsValidator.logPath.toString());
+				evaluator.call(method, fileLoc, rules, ignoreTestFile, logPathLoc);
+			}
 		}
 	}
 
@@ -89,7 +97,14 @@ public class Runner {
 			IList excludes) throws URISyntaxException {
 		for (String file : argsValidator.fileArguments) {
 			ISourceLocation fileLoc = stringPathToISourceLocation(file);
-			evaluator.call(method, fileLoc, excludes);
+
+			if (argsValidator.logPath == null) {
+				evaluator.call(method, fileLoc, excludes);
+			} else {
+				ISourceLocation logPathLoc = stringPathToISourceLocation(
+						argsValidator.logPath.toString());
+				evaluator.call(method, fileLoc, excludes, logPathLoc);
+			}
 		}
 	}
 
@@ -103,9 +118,9 @@ public class Runner {
 	}
 
 	private static IList listOfStringAsIList(List<String> strings) {
-		List<IString> listOfIStrings = new ArrayList<>(strings.size());
-
-		strings.forEach(s -> listOfIStrings.add(ValueFactory.getInstance().string(s)));
+		List<IString> listOfIStrings = strings.stream() //
+				.map(s -> ValueFactory.getInstance().string(s)) //
+				.collect(Collectors.toList());
 
 		return ValueFactory.getInstance()
 				.list(listOfIStrings.toArray(new IString[listOfIStrings.size()]));
@@ -113,14 +128,36 @@ public class Runner {
 
 	private static void fixForAllRules(ArgsValidator argsValidator) throws URISyntaxException {
 		for (String dir : argsValidator.directoryArguments) {
-			ISourceLocation fileLoc = stringPathToISourceLocation(dir);
-			IBool ignoreTestFile = ValueFactory.getInstance().bool(argsValidator.ignoreTestFiles);
-			evaluator.call(FIX_DIRECTORY_METHOD, fileLoc, ignoreTestFile);
+			callFixForAllRulesForDirectory(dir, argsValidator);
 		}
 
 		for (String file : argsValidator.fileArguments) {
-			ISourceLocation fileLoc = stringPathToISourceLocation(file);
+			callFixForAllRulesForFile(file, argsValidator.logPath);
+		}
+	}
+
+	private static void callFixForAllRulesForDirectory(String dir, ArgsValidator argsValidator)
+			throws URISyntaxException {
+		ISourceLocation fileLoc = stringPathToISourceLocation(dir);
+		IBool ignoreTestFile = ValueFactory.getInstance().bool(argsValidator.ignoreTestFiles);
+
+		if (argsValidator.logPath == null) {
+			evaluator.call(FIX_DIRECTORY_METHOD, fileLoc, ignoreTestFile);
+		} else {
+			ISourceLocation logPath = stringPathToISourceLocation(argsValidator.logPath.toString());
+			evaluator.call(FIX_DIRECTORY_METHOD, fileLoc, ignoreTestFile, logPath);
+		}
+	}
+
+	private static void callFixForAllRulesForFile(String file, Path logPath)
+			throws URISyntaxException {
+		ISourceLocation fileLoc = stringPathToISourceLocation(file);
+
+		if (logPath == null) {
 			evaluator.call(FIX_FILE_METHOD, fileLoc);
+		} else {
+			ISourceLocation logPathLoc = stringPathToISourceLocation(logPath.toString());
+			evaluator.call(FIX_FILE_METHOD, fileLoc, logPathLoc);
 		}
 	}
 
@@ -130,6 +167,7 @@ public class Runner {
 		private static final String INCLUDES_OPTION = "rules";
 		private static final String EXCLUDES_OPTION = "excludeRules";
 		private static final String IGNORE_TEST_FILES = "ignoreTestFiles";
+		private static final String LOG_PATH = "logPath";
 
 		private final List<String> pathArguments;
 
@@ -140,6 +178,8 @@ public class Runner {
 
 		private List<String> directoryArguments;
 		private List<String> fileArguments;
+
+		private Path logPath;
 
 		ArgsValidator(String[] args) {
 			pathArguments = Stream.of(args) //
@@ -152,6 +192,7 @@ public class Runner {
 			rulesToInclude = valuesFromListOption(INCLUDES_OPTION);
 			rulesToExclude = valuesFromListOption(EXCLUDES_OPTION);
 			ignoreTestFiles = valueFromBoolean(IGNORE_TEST_FILES, true);
+			logPath = parseLogPath();
 
 			validateOptions();
 
@@ -254,6 +295,15 @@ public class Runner {
 					+ ", rulesToInclude=" + rulesToInclude + ", rulesToExclude=" + rulesToExclude
 					+ ", ignoreTestFiles=" + ignoreTestFiles + ", directoryArguments="
 					+ directoryArguments + ", fileArguments=" + fileArguments + "]";
+		}
+
+		private Path parseLogPath() {
+			Optional<String> logPathOpt = possibleOption(LOG_PATH);
+			if (logPathOpt.isPresent()) {
+				String path = valuesSubStringFromOption(LOG_PATH, logPathOpt.get());
+				return Paths.get(path);
+			}
+			return null;
 		}
 
 	}
